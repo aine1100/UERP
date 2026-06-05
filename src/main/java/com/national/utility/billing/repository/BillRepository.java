@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
@@ -18,6 +19,9 @@ import java.util.UUID;
 public interface BillRepository extends JpaRepository<Bill, UUID> {
 
     Optional<Bill> findByBillReference(String billReference);
+
+    @Query("SELECT b FROM Bill b JOIN FETCH b.reading WHERE b.id = :id")
+    Optional<Bill> findByIdWithReading(@Param("id") UUID id);
 
     Page<Bill> findByCustomerId(UUID customerId, Pageable pageable);
 

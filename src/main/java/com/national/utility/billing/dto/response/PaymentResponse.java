@@ -27,6 +27,9 @@ public class PaymentResponse {
     private LocalDate paymentDate;
     private UUID billId;
     private String billReference;
+    @Schema(description = "Bill outstanding balance right now (unchanged while payment is pending approval)")
     private BigDecimal remainingBalance;
+    @Schema(description = "Expected outstanding after finance approves this payment; null if already approved/rejected")
+    private BigDecimal projectedOutstandingBalance;
     private LocalDateTime createdAt;
 }

@@ -4,6 +4,9 @@ import com.national.utility.billing.dto.common.LocationAddressDto;
 import com.national.utility.billing.dto.common.LocationSelectionDto;
 import com.national.utility.billing.dto.response.*;
 import com.national.utility.billing.model.*;
+import com.national.utility.billing.model.enums.PaymentStatus;
+
+import java.math.BigDecimal;
 
 public final class EntityMapper {
 
@@ -87,6 +90,13 @@ public final class EntityMapper {
     }
 
     public static PaymentResponse toPaymentResponse(Payment payment) {
+        BigDecimal currentOutstanding = payment.getBill().getOutstandingBalance();
+        BigDecimal projectedOutstanding = null;
+        if (payment.getStatus() == PaymentStatus.PENDING_APPROVAL) {
+            projectedOutstanding = currentOutstanding.subtract(payment.getAmountPaid())
+                    .max(BigDecimal.ZERO);
+        }
+
         return PaymentResponse.builder()
                 .id(payment.getId())
                 .amountPaid(payment.getAmountPaid())
@@ -95,7 +105,8 @@ public final class EntityMapper {
                 .paymentDate(payment.getPaymentDate())
                 .billId(payment.getBill().getId())
                 .billReference(payment.getBill().getBillReference())
-                .remainingBalance(payment.getBill().getOutstandingBalance())
+                .remainingBalance(currentOutstanding)
+                .projectedOutstandingBalance(projectedOutstanding)
                 .createdAt(payment.getCreatedAt())
                 .build();
     }

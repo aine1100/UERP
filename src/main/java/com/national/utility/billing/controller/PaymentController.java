@@ -34,8 +34,8 @@ public class PaymentController {
     public ResponseEntity<ApiResponse<PaymentResponse>> processPayment(@Valid @RequestBody PaymentRequest request) {
         PaymentResponse payment = paymentService.processPayment(request);
         String message = payment.getStatus() == com.national.utility.billing.model.enums.PaymentStatus.PENDING_APPROVAL
-                ? "Payment submitted for finance approval"
-                : "Payment processed";
+                ? "Payment submitted for finance approval — bill balance updates only after finance approves"
+                : "Payment processed and bill balance updated";
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(message, payment));
     }

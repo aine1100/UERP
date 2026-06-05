@@ -1,6 +1,7 @@
 package com.national.utility.billing.dto.request;
 
 import com.national.utility.billing.model.enums.PaymentMethod;
+import com.national.utility.billing.validation.ValidPayment;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -16,6 +17,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ValidPayment
 @Schema(description = "Process bill payment")
 public class PaymentRequest {
 
@@ -35,6 +37,6 @@ public class PaymentRequest {
 
     @NotNull(message = "Payment date is required")
     @PastOrPresent(message = "Payment date cannot be in the future")
-    @Schema(example = "2025-05-10")
+    @Schema(example = "2025-05-10", description = "Must be on or after the bill's meter reading date")
     private LocalDate paymentDate;
 }
