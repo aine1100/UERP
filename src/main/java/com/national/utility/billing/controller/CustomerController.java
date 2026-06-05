@@ -17,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/customers")
 @RequiredArgsConstructor
@@ -27,7 +29,7 @@ public class CustomerController {
     private final CustomerService customerService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'FINANCE')")
+    @PreAuthorize("@authz.adminOrAny('OPERATOR', 'FINANCE')")
     @Operation(summary = "List customers")
     public ResponseEntity<ApiResponse<Page<CustomerResponse>>> getAllCustomers(
             @PageableDefault(size = 10) Pageable pageable) {
@@ -35,14 +37,14 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'FINANCE')")
+    @PreAuthorize("@authz.adminOrAny('OPERATOR', 'FINANCE')")
     @Operation(summary = "Get customer by ID")
-    public ResponseEntity<ApiResponse<CustomerResponse>> getCustomer(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<CustomerResponse>> getCustomer(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success("Customer retrieved", customerService.getCustomerById(id)));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("@authz.adminOrAny('OPERATOR')")
     @Operation(summary = "Create customer")
     public ResponseEntity<ApiResponse<CustomerResponse>> createCustomer(@Valid @RequestBody CustomerRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -53,14 +55,14 @@ public class CustomerController {
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update customer")
     public ResponseEntity<ApiResponse<CustomerResponse>> updateCustomer(
-            @PathVariable Long id, @Valid @RequestBody CustomerRequest request) {
+            @PathVariable UUID id, @Valid @RequestBody CustomerRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Customer updated", customerService.updateCustomer(id, request)));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Delete customer")
-    public ResponseEntity<ApiResponse<Void>> deleteCustomer(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteCustomer(@PathVariable UUID id) {
         customerService.deleteCustomer(id);
         return ResponseEntity.ok(ApiResponse.success("Customer deleted", null));
     }

@@ -17,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/tariffs")
 @RequiredArgsConstructor
@@ -27,7 +29,7 @@ public class TariffController {
     private final TariffService tariffService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE')")
+    @PreAuthorize("@authz.adminOrAny('FINANCE')")
     @Operation(summary = "List tariffs")
     public ResponseEntity<ApiResponse<Page<TariffResponse>>> getAllTariffs(
             @PageableDefault(size = 10) Pageable pageable) {
@@ -35,9 +37,9 @@ public class TariffController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE')")
+    @PreAuthorize("@authz.adminOrAny('FINANCE')")
     @Operation(summary = "Get tariff by ID")
-    public ResponseEntity<ApiResponse<TariffResponse>> getTariff(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<TariffResponse>> getTariff(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success("Tariff retrieved", tariffService.getTariffById(id)));
     }
 
@@ -53,7 +55,7 @@ public class TariffController {
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update tariff")
     public ResponseEntity<ApiResponse<TariffResponse>> updateTariff(
-            @PathVariable Long id, @Valid @RequestBody TariffRequest request) {
+            @PathVariable UUID id, @Valid @RequestBody TariffRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Tariff updated", tariffService.updateTariff(id, request)));
     }
 }

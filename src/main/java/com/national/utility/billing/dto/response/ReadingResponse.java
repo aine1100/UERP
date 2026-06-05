@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -17,14 +18,14 @@ import java.time.LocalDateTime;
 @Schema(description = "Meter reading details")
 public class ReadingResponse {
 
-    private Long id;
+    private UUID id;
     private BigDecimal previousReading;
     private BigDecimal currentReading;
     private LocalDate readingDate;
     private Integer month;
     private Integer year;
-    private Long meterId;
+    private UUID meterId;
     private String meterNumber;
-    private Long billId;
+    private UUID billId;
     private LocalDateTime createdAt;
 }

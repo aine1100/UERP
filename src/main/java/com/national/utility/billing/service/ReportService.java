@@ -1,8 +1,11 @@
 package com.national.utility.billing.service;
 
+import com.national.utility.billing.dto.response.FinanceSummaryResponse;
 import com.national.utility.billing.model.Bill;
 import com.national.utility.billing.model.Customer;
 import com.national.utility.billing.model.Payment;
+import com.national.utility.billing.model.enums.BillStatus;
+import com.national.utility.billing.model.enums.PaymentStatus;
 import com.national.utility.billing.repository.BillRepository;
 import com.national.utility.billing.repository.CustomerRepository;
 import com.national.utility.billing.repository.PaymentRepository;
@@ -20,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -30,6 +34,22 @@ public class ReportService {
     private final BillRepository billRepository;
     private final PaymentRepository paymentRepository;
     private final CustomerRepository customerRepository;
+
+    @Transactional(readOnly = true)
+    public FinanceSummaryResponse getFinanceSummary() {
+        return FinanceSummaryResponse.builder()
+                .totalBills(billRepository.count())
+                .totalBilledAmount(defaultZero(billRepository.sumTotalAmount()))
+                .totalOutstanding(defaultZero(billRepository.sumOutstandingBalance()))
+                .unpaidBills(billRepository.countByStatus(BillStatus.UNPAID))
+                .partialBills(billRepository.countByStatus(BillStatus.PARTIAL))
+                .paidBills(billRepository.countByStatus(BillStatus.PAID))
+                .pendingApprovalBills(billRepository.countByStatus(BillStatus.PENDING_APPROVAL))
+                .pendingApprovalPayments(paymentRepository.countByStatus(PaymentStatus.PENDING_APPROVAL))
+                .totalPayments(paymentRepository.countByStatus(PaymentStatus.APPROVED))
+                .totalPaymentsAmount(defaultZero(paymentRepository.sumApprovedAmountPaid()))
+                .build();
+    }
 
     @Transactional(readOnly = true)
     public byte[] exportBillsCsv(Pageable pageable) throws IOException {
@@ -60,7 +80,7 @@ public class ReportService {
                 "ID", "Reference", "Customer", "Consumption", "Amount", "Tax",
                 "Penalty", "Total", "Outstanding", "Status", "Month", "Year"
         }, bills.getContent(), (row, bill) -> {
-            row.createCell(0).setCellValue(bill.getId());
+            row.createCell(0).setCellValue(bill.getId().toString());
             row.createCell(1).setCellValue(bill.getBillReference());
             row.createCell(2).setCellValue(bill.getCustomer().getFullNames());
             row.createCell(3).setCellValue(bill.getConsumption().doubleValue());
@@ -138,6 +158,10 @@ public class ReportService {
             workbook.write(out);
             return out.toByteArray();
         }
+    }
+
+    private BigDecimal defaultZero(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
     }
 
     @FunctionalInterface

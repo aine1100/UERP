@@ -4,25 +4,18 @@ import com.national.utility.billing.config.AppProperties;
 import com.national.utility.billing.dto.request.*;
 import com.national.utility.billing.dto.response.AuthResponse;
 import com.national.utility.billing.dto.response.MessageResponse;
-import com.national.utility.billing.dto.response.UserResponse;
 import com.national.utility.billing.dto.response.VerifyAccountResponse;
 import com.national.utility.billing.exception.BusinessException;
 import com.national.utility.billing.exception.ResourceNotFoundException;
 import com.national.utility.billing.exception.UnauthorizedException;
-import com.national.utility.billing.model.Customer;
 import com.national.utility.billing.model.RefreshToken;
 import com.national.utility.billing.model.User;
-import com.national.utility.billing.model.enums.CustomerStatus;
-import com.national.utility.billing.model.enums.UserRole;
 import com.national.utility.billing.model.enums.UserStatus;
-import com.national.utility.billing.repository.CustomerRepository;
 import com.national.utility.billing.repository.RefreshTokenRepository;
 import com.national.utility.billing.repository.UserRepository;
 import com.national.utility.billing.security.JwtTokenProvider;
 import com.national.utility.billing.security.UserPrincipal;
-import com.national.utility.billing.service.mapper.EntityMapper;
 import com.national.utility.billing.util.OtpGenerator;
-import com.national.utility.billing.util.PhoneUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -38,13 +31,11 @@ import java.time.LocalDateTime;
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final CustomerRepository customerRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final EmailService emailService;
-    private final LocationService locationService;
     private final AppProperties appProperties;
 
     @Transactional
@@ -174,51 +165,6 @@ public class AuthService {
                 .ifPresent(refreshTokenRepository::delete);
     }
 
-    @Transactional
-    public UserResponse inviteUser(InviteUserRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessException("Email is already registered");
-        }
-
-        if (request.getRole() == UserRole.CUSTOMER) {
-            validateCustomerInviteFields(request);
-            if (customerRepository.existsByNationalId(request.getNationalId())) {
-                throw new BusinessException("National ID is already registered");
-            }
-            if (customerRepository.existsByEmail(request.getEmail())) {
-                throw new BusinessException("Customer email is already registered");
-            }
-        }
-
-        User user = User.builder()
-                .fullNames(request.getFullNames())
-                .email(request.getEmail())
-                .phoneNumber(PhoneUtils.normalizeRwandaPhone(request.getPhoneNumber()))
-                .status(UserStatus.INVITED)
-                .role(request.getRole())
-                .otpVerified(false)
-                .build();
-
-        user = userRepository.save(user);
-
-        if (request.getRole() == UserRole.CUSTOMER) {
-            Customer customer = Customer.builder()
-                    .fullNames(request.getFullNames())
-                    .nationalId(request.getNationalId())
-                    .email(request.getEmail())
-                    .phoneNumber(PhoneUtils.normalizeRwandaPhone(request.getPhoneNumber()))
-                    .address(locationService.resolveSelection(request.getLocation()))
-                    .status(CustomerStatus.ACTIVE)
-                    .user(user)
-                    .build();
-            customerRepository.save(customer);
-        }
-
-        issueInviteOtp(user);
-
-        return EntityMapper.toUserResponse(user);
-    }
-
     private void issueInviteOtp(User user) {
         String otp = OtpGenerator.generateSixDigitOtp();
         user.setInviteToken(otp);
@@ -305,12 +251,4 @@ public class AuthService {
                 .build();
     }
 
-    private void validateCustomerInviteFields(InviteUserRequest request) {
-        if (request.getNationalId() == null || request.getNationalId().isBlank()) {
-            throw new BusinessException("National ID is required when inviting a customer");
-        }
-        if (request.getLocation() == null) {
-            throw new BusinessException("Location is required when inviting a customer");
-        }
-    }
 }

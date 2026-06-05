@@ -4,12 +4,8 @@ import com.national.utility.billing.model.enums.MeterType;
 import com.national.utility.billing.model.enums.TariffStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "tariffs")
@@ -17,11 +13,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Tariff {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Tariff extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -49,10 +41,4 @@ public class Tariff {
     @Column(nullable = false)
     private TariffStatus status;
 
-    @CreationTimestamp
-    @Column(updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 }

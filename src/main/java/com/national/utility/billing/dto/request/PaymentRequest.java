@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -19,9 +20,8 @@ import java.time.LocalDate;
 public class PaymentRequest {
 
     @NotNull(message = "Bill ID is required")
-    @Positive(message = "Bill ID must be positive")
-    @Schema(example = "1")
-    private Long billId;
+    @Schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    private UUID billId;
 
     @NotNull(message = "Amount paid is required")
     @DecimalMin(value = "0.01", inclusive = true, message = "Amount paid must be greater than zero")

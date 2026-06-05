@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -19,7 +20,7 @@ import java.time.LocalDateTime;
 @Schema(description = "Tariff details")
 public class TariffResponse {
 
-    private Long id;
+    private UUID id;
     private MeterType utilityType;
     private BigDecimal ratePerUnit;
     private BigDecimal fixedServiceCharge;

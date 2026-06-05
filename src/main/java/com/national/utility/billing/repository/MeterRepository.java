@@ -7,16 +7,20 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface MeterRepository extends JpaRepository<Meter, Long> {
+public interface MeterRepository extends JpaRepository<Meter, UUID> {
 
     Optional<Meter> findByMeterNumber(String meterNumber);
 
     boolean existsByMeterNumber(String meterNumber);
 
-    Page<Meter> findByCustomerId(Long customerId, Pageable pageable);
+    Page<Meter> findByCustomerId(UUID customerId, Pageable pageable);
+
+    List<Meter> findByCustomerId(UUID customerId);
 
     Page<Meter> findByMeterType(MeterType meterType, Pageable pageable);
 }

@@ -5,6 +5,7 @@ import com.national.utility.billing.dto.response.TariffResponse;
 import com.national.utility.billing.exception.BusinessException;
 import com.national.utility.billing.exception.ResourceNotFoundException;
 import com.national.utility.billing.model.Tariff;
+import com.national.utility.billing.model.enums.MeterType;
 import com.national.utility.billing.model.enums.TariffStatus;
 import com.national.utility.billing.repository.TariffRepository;
 import com.national.utility.billing.service.mapper.EntityMapper;
@@ -13,6 +14,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -26,15 +29,14 @@ public class TariffService {
     }
 
     @Transactional(readOnly = true)
-    public TariffResponse getTariffById(Long id) {
+    public TariffResponse getTariffById(UUID id) {
         return EntityMapper.toTariffResponse(findTariff(id));
     }
 
     @Transactional
     public TariffResponse createTariff(TariffRequest request) {
-        if (request.getStatus() == TariffStatus.ACTIVE
-                && tariffRepository.existsByUtilityTypeAndStatus(request.getUtilityType(), TariffStatus.ACTIVE)) {
-            deactivateExistingActiveTariff(request.getUtilityType());
+        if (request.getStatus() == TariffStatus.ACTIVE) {
+            deactivateOtherActiveTariffs(request.getUtilityType(), null);
         }
 
         int nextVersion = tariffRepository.findAll().stream()
@@ -58,13 +60,16 @@ public class TariffService {
     }
 
     @Transactional
-    public TariffResponse updateTariff(Long id, TariffRequest request) {
+    public TariffResponse updateTariff(UUID id, TariffRequest request) {
         Tariff tariff = findTariff(id);
 
-        if (request.getStatus() == TariffStatus.ACTIVE
-                && tariff.getStatus() != TariffStatus.ACTIVE
-                && tariffRepository.existsByUtilityTypeAndStatus(request.getUtilityType(), TariffStatus.ACTIVE)) {
-            deactivateExistingActiveTariff(request.getUtilityType());
+        if (tariff.getUtilityType() != request.getUtilityType()) {
+            throw new BusinessException(
+                    "Utility type cannot be changed after tariff creation. Create a new tariff instead.");
+        }
+
+        if (request.getStatus() == TariffStatus.ACTIVE) {
+            deactivateOtherActiveTariffs(request.getUtilityType(), id);
         }
 
         tariff.setUtilityType(request.getUtilityType());
@@ -79,21 +84,24 @@ public class TariffService {
     }
 
     @Transactional(readOnly = true)
-    public Tariff getActiveTariffForUtility(com.national.utility.billing.model.enums.MeterType utilityType) {
-        return tariffRepository.findByUtilityTypeAndStatus(utilityType, TariffStatus.ACTIVE)
+    public Tariff getActiveTariffForUtility(MeterType utilityType) {
+        return tariffRepository.findFirstByUtilityTypeAndStatusOrderByVersionDesc(
+                        utilityType, TariffStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(
                         "No active tariff found for utility type: " + utilityType));
     }
 
-    private void deactivateExistingActiveTariff(com.national.utility.billing.model.enums.MeterType utilityType) {
-        tariffRepository.findByUtilityTypeAndStatus(utilityType, TariffStatus.ACTIVE)
-                .ifPresent(existing -> {
-                    existing.setStatus(TariffStatus.INACTIVE);
-                    tariffRepository.save(existing);
+    private void deactivateOtherActiveTariffs(MeterType utilityType, UUID excludeId) {
+        tariffRepository.findAllByUtilityTypeAndStatus(utilityType, TariffStatus.ACTIVE)
+                .forEach(existing -> {
+                    if (excludeId == null || !existing.getId().equals(excludeId)) {
+                        existing.setStatus(TariffStatus.INACTIVE);
+                        tariffRepository.save(existing);
+                    }
                 });
     }
 
-    private Tariff findTariff(Long id) {
+    private Tariff findTariff(UUID id) {
         return tariffRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tariff not found with id: " + id));
     }

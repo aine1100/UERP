@@ -91,6 +91,7 @@ public final class EntityMapper {
                 .id(payment.getId())
                 .amountPaid(payment.getAmountPaid())
                 .paymentMethod(payment.getPaymentMethod())
+                .status(payment.getStatus())
                 .paymentDate(payment.getPaymentDate())
                 .billId(payment.getBill().getId())
                 .billReference(payment.getBill().getBillReference())

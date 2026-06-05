@@ -17,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
@@ -27,15 +29,19 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('FINANCE', 'CUSTOMER')")
-    @Operation(summary = "Process payment")
+    @PreAuthorize("@authz.adminOrAny('FINANCE', 'CUSTOMER')")
+    @Operation(summary = "Submit payment (customer: pending approval; finance: approved immediately)")
     public ResponseEntity<ApiResponse<PaymentResponse>> processPayment(@Valid @RequestBody PaymentRequest request) {
+        PaymentResponse payment = paymentService.processPayment(request);
+        String message = payment.getStatus() == com.national.utility.billing.model.enums.PaymentStatus.PENDING_APPROVAL
+                ? "Payment submitted for finance approval"
+                : "Payment processed";
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Payment processed", paymentService.processPayment(request)));
+                .body(ApiResponse.success(message, payment));
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("@authz.adminOrAny('FINANCE')")
     @Operation(summary = "List all payments")
     public ResponseEntity<ApiResponse<Page<PaymentResponse>>> getAllPayments(
             @PageableDefault(size = 10) Pageable pageable) {
@@ -43,7 +49,7 @@ public class PaymentController {
     }
 
     @GetMapping("/my")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("@authz.adminOrAny('CUSTOMER')")
     @Operation(summary = "List my payments")
     public ResponseEntity<ApiResponse<Page<PaymentResponse>>> getMyPayments(
             @PageableDefault(size = 10) Pageable pageable) {
@@ -51,10 +57,33 @@ public class PaymentController {
                 paymentService.getPaymentsForCurrentCustomer(pageable)));
     }
 
+    @GetMapping("/pending")
+    @PreAuthorize("@authz.adminOrAny('FINANCE')")
+    @Operation(summary = "List customer payments awaiting finance approval")
+    public ResponseEntity<ApiResponse<Page<PaymentResponse>>> getPendingPayments(
+            @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Pending payments retrieved", paymentService.getPendingApprovalPayments(pageable)));
+    }
+
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("@authz.adminOrAny('FINANCE')")
+    @Operation(summary = "Approve customer payment — updates bill and emails receipt")
+    public ResponseEntity<ApiResponse<PaymentResponse>> approvePayment(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success("Payment approved", paymentService.approvePayment(id)));
+    }
+
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("@authz.adminOrAny('FINANCE')")
+    @Operation(summary = "Reject customer payment")
+    public ResponseEntity<ApiResponse<PaymentResponse>> rejectPayment(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success("Payment rejected", paymentService.rejectPayment(id)));
+    }
+
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('FINANCE', 'CUSTOMER')")
+    @PreAuthorize("@authz.adminOrAny('FINANCE', 'CUSTOMER')")
     @Operation(summary = "Get payment by ID")
-    public ResponseEntity<ApiResponse<PaymentResponse>> getPayment(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<PaymentResponse>> getPayment(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success("Payment retrieved", paymentService.getPaymentById(id)));
     }
 }

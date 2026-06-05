@@ -3,25 +3,21 @@ package com.national.utility.billing.model;
 import com.national.utility.billing.model.enums.BillStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Bill entity. INSERT operations fire PostgreSQL trigger {@code trg_bill_after_insert}
+ * which writes a {@code BILL_GENERATED} notification (see {@code db/routines.sql}).
+ */
 @Entity
 @Table(name = "bills")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Bill {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Bill extends AuditableEntity {
 
     @Column(nullable = false, unique = true)
     private String billReference;
@@ -66,10 +62,4 @@ public class Bill {
     @Builder.Default
     private List<Payment> payments = new ArrayList<>();
 
-    @CreationTimestamp
-    @Column(updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 }

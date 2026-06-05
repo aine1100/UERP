@@ -2,11 +2,8 @@ package com.national.utility.billing.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "readings", uniqueConstraints = {
@@ -16,11 +13,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Reading {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Reading extends AuditableEntity {
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal previousReading;
@@ -44,7 +37,4 @@ public class Reading {
     @OneToOne(mappedBy = "reading", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Bill bill;
 
-    @CreationTimestamp
-    @Column(updatable = false)
-    private LocalDateTime createdAt;
 }

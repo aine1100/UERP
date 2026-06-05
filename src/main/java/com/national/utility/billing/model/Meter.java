@@ -4,11 +4,7 @@ import com.national.utility.billing.model.enums.MeterStatus;
 import com.national.utility.billing.model.enums.MeterType;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,11 +14,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Meter {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Meter extends AuditableEntity {
 
     @Column(nullable = false, unique = true)
     private String meterNumber;
@@ -46,10 +38,4 @@ public class Meter {
     @Builder.Default
     private List<Reading> readings = new ArrayList<>();
 
-    @CreationTimestamp
-    @Column(updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 }

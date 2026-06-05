@@ -1,5 +1,7 @@
 package com.national.utility.billing.controller;
 
+import com.national.utility.billing.dto.response.ApiResponse;
+import com.national.utility.billing.dto.response.FinanceSummaryResponse;
 import com.national.utility.billing.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -27,8 +29,16 @@ public class ReportController {
 
     private final ReportService reportService;
 
+    @GetMapping("/summary")
+    @PreAuthorize("@authz.adminOrAny('FINANCE')")
+    @Operation(summary = "Finance dashboard totals — all bills and payments")
+    public ResponseEntity<ApiResponse<FinanceSummaryResponse>> getFinanceSummary() {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Finance summary retrieved", reportService.getFinanceSummary()));
+    }
+
     @GetMapping("/bills/download")
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("@authz.adminOrAny('FINANCE')")
     @Operation(summary = "Download bills report")
     public ResponseEntity<byte[]> downloadBills(
             @RequestParam(defaultValue = "csv") String format,
@@ -55,7 +65,7 @@ public class ReportController {
     }
 
     @GetMapping("/payments/download")
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("@authz.adminOrAny('FINANCE')")
     @Operation(summary = "Download payments report")
     public ResponseEntity<byte[]> downloadPayments(
             @PageableDefault(size = 100) Pageable pageable) throws IOException {
@@ -68,7 +78,7 @@ public class ReportController {
     }
 
     @GetMapping("/customers/download")
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("@authz.adminOrAny('FINANCE')")
     @Operation(summary = "Download customers report")
     public ResponseEntity<byte[]> downloadCustomers(
             @PageableDefault(size = 100) Pageable pageable) throws IOException {

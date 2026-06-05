@@ -13,6 +13,7 @@ public class AppProperties {
     private Invite invite = new Invite();
     private Otp otp = new Otp();
     private Admin admin = new Admin();
+    private Notifications notifications = new Notifications();
 
     @Data
     public static class Jwt {
@@ -37,5 +38,15 @@ public class AppProperties {
         private String fullNames;
         private String phone;
         private String password;
+    }
+
+    @Data
+    public static class Notifications {
+        /** Bills unpaid for this many days are considered overdue. */
+        private int overdueDays = 30;
+        /** Run overdue checks on startup and on a fixed interval. */
+        private boolean overdueScheduleEnabled = true;
+        /** Milliseconds between overdue checks (default 5 minutes). */
+        private long overdueCheckIntervalMs = 300_000L;
     }
 }

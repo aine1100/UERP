@@ -5,11 +5,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface ReadingRepository extends JpaRepository<Reading, Long> {
+public interface ReadingRepository extends JpaRepository<Reading, UUID> {
 
-    boolean existsByMeterIdAndMonthAndYear(Long meterId, Integer month, Integer year);
+    boolean existsByMeterIdAndMonthAndYear(UUID meterId, Integer month, Integer year);
 
-    Optional<Reading> findTopByMeterIdOrderByReadingDateDesc(Long meterId);
+    Optional<Reading> findTopByMeterIdOrderByYearDescMonthDesc(UUID meterId);
 }

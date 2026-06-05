@@ -4,17 +4,13 @@ import com.national.utility.billing.dto.request.*;
 import com.national.utility.billing.dto.response.ApiResponse;
 import com.national.utility.billing.dto.response.AuthResponse;
 import com.national.utility.billing.dto.response.MessageResponse;
-import com.national.utility.billing.dto.response.UserResponse;
 import com.national.utility.billing.dto.response.VerifyAccountResponse;
 import com.national.utility.billing.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -83,12 +79,4 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Logged out successfully", null));
     }
 
-    @PostMapping("/invite")
-    @PreAuthorize("hasRole('ADMIN')")
-    @SecurityRequirement(name = "Bearer Authentication")
-    @Operation(summary = "Invite user")
-    public ResponseEntity<ApiResponse<UserResponse>> inviteUser(@Valid @RequestBody InviteUserRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("User invited successfully", authService.inviteUser(request)));
-    }
 }

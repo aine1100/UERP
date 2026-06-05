@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -30,7 +31,7 @@ public class JwtTokenProvider {
     }
 
     public String generateRefreshTokenValue() {
-        return java.util.UUID.randomUUID().toString();
+        return UUID.randomUUID().toString();
     }
 
     public long getAccessTokenExpirationMs() {
@@ -41,13 +42,13 @@ public class JwtTokenProvider {
         return appProperties.getJwt().getRefreshTokenExpirationMs();
     }
 
-    private String buildToken(Long userId, String email, String role, long expirationMs) {
+    private String buildToken(UUID userId, String email, String role, long expirationMs) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
                 .subject(email)
-                .claim("userId", userId)
+                .claim("userId", userId.toString())
                 .claim("role", role)
                 .issuedAt(now)
                 .expiration(expiry)
@@ -59,8 +60,8 @@ public class JwtTokenProvider {
         return parseClaims(token).getSubject();
     }
 
-    public Long getUserIdFromToken(String token) {
-        return parseClaims(token).get("userId", Long.class);
+    public UUID getUserIdFromToken(String token) {
+        return UUID.fromString(parseClaims(token).get("userId", String.class));
     }
 
     public String getRoleFromToken(String token) {

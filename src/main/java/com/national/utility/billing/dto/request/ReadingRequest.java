@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -20,14 +21,13 @@ import java.time.LocalDate;
 public class ReadingRequest {
 
     @NotNull(message = "Meter ID is required")
-    @Positive(message = "Meter ID must be positive")
-    @Schema(example = "1")
-    private Long meterId;
+    @Schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    private UUID meterId;
 
     @NotNull(message = "Previous reading is required")
     @DecimalMin(value = "0.0", inclusive = true, message = "Previous reading cannot be negative")
     @Digits(integer = 10, fraction = 2, message = "Previous reading must have at most 10 integer and 2 decimal digits")
-    @Schema(example = "1500.50")
+    @Schema(example = "1500.50", description = "Opening meter value for first reading; for later readings must match last month's current reading")
     private BigDecimal previousReading;
 
     @NotNull(message = "Current reading is required")
@@ -38,7 +38,7 @@ public class ReadingRequest {
 
     @NotNull(message = "Reading date is required")
     @PastOrPresent(message = "Reading date cannot be in the future")
-    @Schema(example = "2025-05-01")
+    @Schema(example = "2025-05-01", description = "May be backdated, but not before meter installation date")
     private LocalDate readingDate;
 
     @NotNull(message = "Month is required")

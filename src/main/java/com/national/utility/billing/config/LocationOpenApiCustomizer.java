@@ -34,7 +34,7 @@ public class LocationOpenApiCustomizer {
         applyEnumsToLocationSchema(schemas.get("LocationSelectionDto"));
 
         applyLocationPropertyEnums(schemas.get("CustomerRequest"), "location");
-        applyLocationPropertyEnums(schemas.get("InviteUserRequest"), "location");
+        applyLocationPropertyEnums(schemas.get("InviteCustomerRequest"), "location");
     }
 
     @SuppressWarnings("rawtypes")

@@ -17,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/readings")
 @RequiredArgsConstructor
@@ -27,16 +29,16 @@ public class ReadingController {
     private final ReadingService readingService;
 
     @PostMapping
-    @PreAuthorize("hasRole('OPERATOR')")
+    @PreAuthorize("@authz.adminOrAny('OPERATOR')")
     @Operation(summary = "Submit reading")
     public ResponseEntity<ApiResponse<ReadingResponse>> submitReading(@Valid @RequestBody ReadingRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Reading submitted and bill generated",
+                .body(ApiResponse.success("Reading submitted — bill created pending finance approval",
                         readingService.submitReading(request)));
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'FINANCE')")
+    @PreAuthorize("@authz.adminOrAny('OPERATOR', 'FINANCE')")
     @Operation(summary = "List readings")
     public ResponseEntity<ApiResponse<Page<ReadingResponse>>> getAllReadings(
             @PageableDefault(size = 10) Pageable pageable) {
@@ -44,9 +46,9 @@ public class ReadingController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'FINANCE')")
+    @PreAuthorize("@authz.adminOrAny('OPERATOR', 'FINANCE')")
     @Operation(summary = "Get reading by ID")
-    public ResponseEntity<ApiResponse<ReadingResponse>> getReading(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<ReadingResponse>> getReading(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success("Reading retrieved", readingService.getReadingById(id)));
     }
 }

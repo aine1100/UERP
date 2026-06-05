@@ -6,12 +6,17 @@ import com.national.utility.billing.model.enums.TariffStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface TariffRepository extends JpaRepository<Tariff, Long> {
+public interface TariffRepository extends JpaRepository<Tariff, UUID> {
 
-    Optional<Tariff> findByUtilityTypeAndStatus(MeterType utilityType, TariffStatus status);
+    Optional<Tariff> findFirstByUtilityTypeAndStatusOrderByVersionDesc(
+            MeterType utilityType, TariffStatus status);
+
+    List<Tariff> findAllByUtilityTypeAndStatus(MeterType utilityType, TariffStatus status);
 
     boolean existsByUtilityTypeAndStatus(MeterType utilityType, TariffStatus status);
 }

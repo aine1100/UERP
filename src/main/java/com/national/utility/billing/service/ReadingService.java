@@ -15,6 +15,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
+/**
+ * Operator submits readings; {@link BillService#generateBillFromReading} persists the bill,
+ * which fires the PostgreSQL bill-generation trigger (notification insert).
+ */
 @Service
 @RequiredArgsConstructor
 public class ReadingService {
@@ -52,11 +58,11 @@ public class ReadingService {
     }
 
     @Transactional(readOnly = true)
-    public ReadingResponse getReadingById(Long id) {
+    public ReadingResponse getReadingById(UUID id) {
         return EntityMapper.toReadingResponse(findReading(id));
     }
 
-    private Reading findReading(Long id) {
+    private Reading findReading(UUID id) {
         return readingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reading not found with id: " + id));
     }

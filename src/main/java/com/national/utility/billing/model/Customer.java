@@ -4,10 +4,6 @@ import com.national.utility.billing.model.embeddable.LocationAddress;
 import com.national.utility.billing.model.enums.CustomerStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,11 +13,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Customer {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Customer extends AuditableEntity {
 
     @Column(nullable = false)
     private String fullNames;
@@ -54,10 +46,4 @@ public class Customer {
     @Builder.Default
     private List<Bill> bills = new ArrayList<>();
 
-    @CreationTimestamp
-    @Column(updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 }

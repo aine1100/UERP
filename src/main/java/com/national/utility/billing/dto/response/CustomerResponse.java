@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -17,13 +18,13 @@ import java.time.LocalDateTime;
 @Schema(description = "Customer details")
 public class CustomerResponse {
 
-    private Long id;
+    private UUID id;
     private String fullNames;
     private String nationalId;
     private String email;
     private String phoneNumber;
     private LocationSelectionDto location;
     private CustomerStatus status;
-    private Long userId;
+    private UUID userId;
     private LocalDateTime createdAt;
 }

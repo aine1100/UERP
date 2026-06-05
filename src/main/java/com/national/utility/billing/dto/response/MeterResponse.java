@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -18,12 +19,12 @@ import java.time.LocalDateTime;
 @Schema(description = "Meter details")
 public class MeterResponse {
 
-    private Long id;
+    private UUID id;
     private String meterNumber;
     private MeterType meterType;
     private LocalDate installationDate;
     private MeterStatus status;
-    private Long customerId;
+    private UUID customerId;
     private String customerName;
     private LocalDateTime createdAt;
 }

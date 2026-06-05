@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -18,7 +19,7 @@ import java.time.LocalDateTime;
 @Schema(description = "Bill details")
 public class BillResponse {
 
-    private Long id;
+    private UUID id;
     private String billReference;
     private BigDecimal consumption;
     private BigDecimal amount;
@@ -29,9 +30,9 @@ public class BillResponse {
     private BillStatus status;
     private Integer month;
     private Integer year;
-    private Long customerId;
+    private UUID customerId;
     private String customerName;
-    private Long readingId;
+    private UUID readingId;
     private MeterType utilityType;
     private LocalDateTime createdAt;
 }

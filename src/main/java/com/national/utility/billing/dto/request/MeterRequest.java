@@ -2,6 +2,7 @@ package com.national.utility.billing.dto.request;
 
 import com.national.utility.billing.model.enums.MeterStatus;
 import com.national.utility.billing.model.enums.MeterType;
+import com.national.utility.billing.validation.MeterNumberValidatable;
 import com.national.utility.billing.validation.ValidMeterNumber;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -13,6 +14,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -20,7 +22,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @ValidMeterNumber
 @Schema(description = "Create or update meter")
-public class MeterRequest {
+public class MeterRequest implements MeterNumberValidatable {
 
     @NotBlank(message = "Meter number is required")
     @Schema(description = "REG: 11 digits | WASAC: 5-20 alphanumeric", example = "12345678901")
@@ -40,6 +42,6 @@ public class MeterRequest {
     private MeterStatus status;
 
     @NotNull(message = "Customer ID is required")
-    @Schema(example = "1")
-    private Long customerId;
+    @Schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    private UUID customerId;
 }

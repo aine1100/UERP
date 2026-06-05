@@ -4,6 +4,8 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.math.BigDecimal;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -79,18 +81,94 @@ public class EmailService {
         sendPlainEmail(to, subject, body);
     }
 
+    /**
+     * Sends the same text stored in {@code notification_messages} (from DB triggers) to the customer inbox.
+     */
     @Async
-    public void sendPaymentReceipt(String to, String customerName, String billReference,
-                                   byte[] pdfBytes, String filename) {
-        String subject = "Payment Receipt - " + billReference;
+    public void sendNewBillWithOutstandingSummaryEmail(String to, String customerName, String newBillLine,
+                                                       String outstandingSummary) {
+        String subject = "New Utility Bill - Outstanding Balance Update";
         String body = """
                 Dear %s,
 
-                Thank you for your payment on bill %s. Your receipt is attached.
+                A new utility bill has been generated:
+
+                %s
+
+                Your current outstanding bills are:
+
+                %s
+
+                Please sign in to view details and make payment.
 
                 Regards,
                 Utility Billing Team
-                """.formatted(customerName, billReference);
+                """.formatted(customerName, newBillLine, outstandingSummary);
+
+        sendPlainEmail(to, subject, body);
+    }
+
+    @Async
+    public void sendConsolidatedOverdueReminderEmail(String to, String customerName, String overdueSummary) {
+        String subject = "Overdue Utility Bills Reminder";
+        String body = """
+                Dear %s,
+
+                You have the following overdue utility bills:
+
+                %s
+
+                Please sign in to view details and make payment.
+
+                Regards,
+                Utility Billing Team
+                """.formatted(customerName, overdueSummary);
+
+        sendPlainEmail(to, subject, body);
+    }
+
+    @Async
+    public void sendCustomerNotificationEmail(String to, String customerName,
+                                              String notificationType, String message) {
+        String subject = "Utility Billing Notification - " + notificationType.replace('_', ' ');
+        String body = """
+                Dear %s,
+
+                %s
+
+                Sign in to view all your notifications.
+
+                Regards,
+                Utility Billing Team
+                """.formatted(customerName, message);
+
+        sendPlainEmail(to, subject, body);
+    }
+
+    @Async
+    public void sendPaymentReceipt(String to, String customerName, String billReference,
+                                   int month, int year, BigDecimal amountPaid, boolean fullyPaid,
+                                   byte[] pdfBytes, String filename) {
+        String subject = "Payment Receipt - " + billReference + " (" + month + "/" + year + ")";
+        String paymentStatus = fullyPaid
+                ? "Your bill for " + month + "/" + year + " is now fully paid."
+                : "This is a partial payment towards your " + month + "/" + year + " bill.";
+        String body = """
+                Dear %s,
+
+                Thank you for your payment.
+
+                Bill Reference: %s
+                Billing Period: %s/%s
+                Amount Paid: RWF %s
+
+                %s
+
+                Your receipt is attached.
+
+                Regards,
+                Utility Billing Team
+                """.formatted(customerName, billReference, month, year, amountPaid, paymentStatus);
 
         sendEmailWithAttachment(to, subject, body, pdfBytes, filename);
     }

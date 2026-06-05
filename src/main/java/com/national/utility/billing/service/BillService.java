@@ -5,6 +5,7 @@ import com.national.utility.billing.exception.BusinessException;
 import com.national.utility.billing.exception.ResourceNotFoundException;
 import com.national.utility.billing.model.*;
 import com.national.utility.billing.model.enums.BillStatus;
+import com.national.utility.billing.model.enums.UserRole;
 import com.national.utility.billing.repository.BillRepository;
 import com.national.utility.billing.repository.CustomerRepository;
 import com.national.utility.billing.security.SecurityUtils;
@@ -18,22 +19,35 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.UUID;
 
+/**
+ * Application-layer bill generation. New bills start as {@link BillStatus#PENDING_APPROVAL}
+ * until finance approves them; only then is the customer notified.
+ */
 @Service
 @RequiredArgsConstructor
 public class BillService {
 
+    private static final List<BillStatus> CUSTOMER_VISIBLE_STATUSES =
+            List.of(BillStatus.UNPAID, BillStatus.PARTIAL, BillStatus.PAID);
+
     private final BillRepository billRepository;
     private final CustomerRepository customerRepository;
     private final TariffService tariffService;
-    private final EmailService emailService;
+    private final NotificationService notificationService;
 
     @Transactional
     public Bill generateBillFromReading(Reading reading) {
         Meter meter = reading.getMeter();
         Customer customer = meter.getCustomer();
         Tariff tariff = tariffService.getActiveTariffForUtility(meter.getMeterType());
+        if (tariff.getUtilityType() != meter.getMeterType()) {
+            throw new BusinessException(
+                    "Active tariff utility type (" + tariff.getUtilityType()
+                            + ") does not match meter type (" + meter.getMeterType() + ")");
+        }
 
         BigDecimal consumption = reading.getCurrentReading()
                 .subtract(reading.getPreviousReading())
@@ -58,22 +72,38 @@ public class BillService {
                 .penalty(penalty)
                 .totalAmount(totalAmount)
                 .outstandingBalance(totalAmount)
-                .status(BillStatus.UNPAID)
+                .status(BillStatus.PENDING_APPROVAL)
                 .month(reading.getMonth())
                 .year(reading.getYear())
                 .reading(reading)
                 .customer(customer)
                 .build();
 
+        return billRepository.saveAndFlush(bill);
+    }
+
+    @Transactional
+    public BillResponse approveBill(UUID id) {
+        Bill bill = findBill(id);
+        if (bill.getStatus() != BillStatus.PENDING_APPROVAL) {
+            throw new BusinessException("Only bills pending finance approval can be approved");
+        }
+
+        bill.setStatus(BillStatus.UNPAID);
         bill = billRepository.save(bill);
+        notificationService.publishApprovedBill(bill);
+        return EntityMapper.toBillResponse(bill);
+    }
 
-        emailService.sendBillNotification(
-                customer.getEmail(),
-                customer.getFullNames(),
-                bill.getBillReference(),
-                bill.getTotalAmount().toPlainString());
+    @Transactional
+    public BillResponse rejectBill(UUID id) {
+        Bill bill = findBill(id);
+        if (bill.getStatus() != BillStatus.PENDING_APPROVAL) {
+            throw new BusinessException("Only bills pending finance approval can be rejected");
+        }
 
-        return bill;
+        bill.setStatus(BillStatus.REJECTED);
+        return EntityMapper.toBillResponse(billRepository.save(bill));
     }
 
     @Transactional(readOnly = true)
@@ -82,58 +112,53 @@ public class BillService {
     }
 
     @Transactional(readOnly = true)
-    public Page<BillResponse> getBillsForCurrentCustomer(Pageable pageable) {
-        Long customerId = getCurrentCustomerId();
-        return billRepository.findByCustomerId(customerId, pageable).map(EntityMapper::toBillResponse);
+    public Page<BillResponse> getPendingApprovalBills(Pageable pageable) {
+        return billRepository.findByStatus(BillStatus.PENDING_APPROVAL, pageable)
+                .map(EntityMapper::toBillResponse);
     }
 
     @Transactional(readOnly = true)
-    public BillResponse getBillById(Long id) {
+    public Page<BillResponse> getBillsForCurrentCustomer(Pageable pageable) {
+        UserPrincipal principal = SecurityUtils.getCurrentUser();
+        if (principal.getRole() == UserRole.ADMIN) {
+            return getAllBills(pageable);
+        }
+        UUID customerId = getCurrentCustomerId();
+        return billRepository.findByCustomerIdAndStatusIn(customerId, CUSTOMER_VISIBLE_STATUSES, pageable)
+                .map(EntityMapper::toBillResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public BillResponse getBillById(UUID id) {
         Bill bill = findBill(id);
         validateBillAccess(bill);
         return EntityMapper.toBillResponse(bill);
     }
 
     @Transactional(readOnly = true)
-    public Bill findBillEntity(Long id) {
+    public Bill findBillEntity(UUID id) {
         return findBill(id);
     }
 
-    @Transactional
-    public void applyPayment(Bill bill, BigDecimal amountPaid) {
-        if (amountPaid.compareTo(bill.getOutstandingBalance()) > 0) {
-            throw new BusinessException("Payment amount exceeds outstanding balance");
-        }
-
-        BigDecimal newBalance = bill.getOutstandingBalance().subtract(amountPaid)
-                .setScale(2, RoundingMode.HALF_UP);
-        bill.setOutstandingBalance(newBalance);
-
-        if (newBalance.compareTo(BigDecimal.ZERO) == 0) {
-            bill.setStatus(BillStatus.PAID);
-        } else {
-            bill.setStatus(BillStatus.PARTIAL);
-        }
-
-        billRepository.save(bill);
-    }
-
-    private Bill findBill(Long id) {
+    private Bill findBill(UUID id) {
         return billRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bill not found with id: " + id));
     }
 
     private void validateBillAccess(Bill bill) {
         UserPrincipal principal = SecurityUtils.getCurrentUser();
-        if (principal.getRole() == com.national.utility.billing.model.enums.UserRole.CUSTOMER) {
-            Long customerId = getCurrentCustomerId();
+        if (principal.getRole() == UserRole.CUSTOMER) {
+            if (!CUSTOMER_VISIBLE_STATUSES.contains(bill.getStatus())) {
+                throw new ResourceNotFoundException("Bill not found with id: " + bill.getId());
+            }
+            UUID customerId = getCurrentCustomerId();
             if (!bill.getCustomer().getId().equals(customerId)) {
                 throw new BusinessException("You can only view your own bills");
             }
         }
     }
 
-    private Long getCurrentCustomerId() {
+    private UUID getCurrentCustomerId() {
         UserPrincipal principal = SecurityUtils.getCurrentUser();
         return customerRepository.findByUserId(principal.getId())
                 .map(Customer::getId)
