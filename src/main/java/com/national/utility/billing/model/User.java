@@ -49,6 +49,9 @@ public class User {
     @Column
     private LocalDateTime inviteTokenExpiry;
 
+    @Builder.Default
+    private Boolean otpVerified = false;
+
     @Column
     private String resetToken;
 

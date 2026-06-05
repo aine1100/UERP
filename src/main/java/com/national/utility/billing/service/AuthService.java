@@ -3,7 +3,9 @@ package com.national.utility.billing.service;
 import com.national.utility.billing.config.AppProperties;
 import com.national.utility.billing.dto.request.*;
 import com.national.utility.billing.dto.response.AuthResponse;
+import com.national.utility.billing.dto.response.MessageResponse;
 import com.national.utility.billing.dto.response.UserResponse;
+import com.national.utility.billing.dto.response.VerifyAccountResponse;
 import com.national.utility.billing.exception.BusinessException;
 import com.national.utility.billing.exception.ResourceNotFoundException;
 import com.national.utility.billing.exception.UnauthorizedException;
@@ -19,6 +21,7 @@ import com.national.utility.billing.repository.UserRepository;
 import com.national.utility.billing.security.JwtTokenProvider;
 import com.national.utility.billing.security.UserPrincipal;
 import com.national.utility.billing.service.mapper.EntityMapper;
+import com.national.utility.billing.util.OtpGenerator;
 import com.national.utility.billing.util.PhoneUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -29,7 +32,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -47,15 +49,19 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
+        userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
+            if (user.getStatus() == UserStatus.INVITED) {
+                if (Boolean.TRUE.equals(user.getOtpVerified())) {
+                    throw new UnauthorizedException(
+                            "Your OTP is verified but your password is not set yet. Use setup-password first, then sign in.");
+                }
+                throw new UnauthorizedException(
+                        "Account not activated. Verify your OTP, set your password, then sign in.");
+            }
+        });
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
-
-        if (principal.getStatus() != UserStatus.ACTIVE) {
-            throw new UnauthorizedException(
-                    "Account is not active. Please complete password setup using your invitation link.");
-        }
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -64,21 +70,50 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse setupPassword(SetupPasswordRequest request) {
-        User user = userRepository.findByInviteToken(request.getInviteToken())
-                .orElseThrow(() -> new ResourceNotFoundException("Invalid or expired invitation token"));
+    public VerifyAccountResponse verifyAccount(VerifyAccountRequest request) {
+        User user = findInvitedUser(request.getEmail());
+        validateInviteOtp(user, request.getOtp());
 
-        if (user.getInviteTokenExpiry() == null || user.getInviteTokenExpiry().isBefore(LocalDateTime.now())) {
-            throw new BusinessException("Invitation token has expired");
+        user.setOtpVerified(true);
+        userRepository.save(user);
+
+        return VerifyAccountResponse.builder()
+                .email(user.getEmail())
+                .verified(true)
+                .message("Account verified. Set your password, then sign in.")
+                .build();
+    }
+
+    @Transactional
+    public void resendOtp(ResendOtpRequest request) {
+        userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
+            if (user.getStatus() == UserStatus.INVITED) {
+                issueInviteOtp(user);
+            }
+        });
+    }
+
+    @Transactional
+    public MessageResponse setupPassword(SetupPasswordRequest request) {
+        User user = findInvitedUser(request.getEmail());
+
+        if (request.getOtp() != null && !request.getOtp().isBlank()) {
+            validateInviteOtp(user, request.getOtp());
+            user.setOtpVerified(true);
+        } else if (!Boolean.TRUE.equals(user.getOtpVerified())) {
+            throw new BusinessException("Verify your OTP first, or include the OTP when setting your password.");
         }
 
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setStatus(UserStatus.ACTIVE);
         user.setInviteToken(null);
         user.setInviteTokenExpiry(null);
+        user.setOtpVerified(false);
         userRepository.save(user);
 
-        return buildAuthResponse(user, true);
+        return MessageResponse.builder()
+                .message("Password set successfully. Please sign in with your email and new password.")
+                .build();
     }
 
     @Transactional
@@ -106,35 +141,20 @@ public class AuthService {
             if (user.getStatus() != UserStatus.ACTIVE || user.getPassword() == null) {
                 return;
             }
-
-            String resetToken = UUID.randomUUID().toString();
-            LocalDateTime expiry = LocalDateTime.now()
-                    .plusHours(appProperties.getReset().getTokenExpirationHours());
-
-            user.setResetToken(resetToken);
-            user.setResetTokenExpiry(expiry);
-            userRepository.save(user);
-
-            emailService.sendPasswordResetEmail(
-                    user.getEmail(),
-                    user.getFullNames(),
-                    resetToken,
-                    appProperties.getReset().getTokenExpirationHours());
+            issueResetOtp(user);
         });
     }
 
     @Transactional
-    public AuthResponse resetPassword(ResetPasswordRequest request) {
-        User user = userRepository.findByResetToken(request.getResetToken())
-                .orElseThrow(() -> new ResourceNotFoundException("Invalid or expired reset token"));
-
-        if (user.getResetTokenExpiry() == null || user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
-            throw new BusinessException("Password reset token has expired");
-        }
+    public MessageResponse resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new BusinessException("Account is not active");
         }
+
+        validateResetOtp(user, request.getOtp());
 
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setResetToken(null);
@@ -143,7 +163,9 @@ public class AuthService {
 
         refreshTokenRepository.deleteByUser(user);
 
-        return buildAuthResponse(user, true);
+        return MessageResponse.builder()
+                .message("Password reset successfully. Please sign in with your new password.")
+                .build();
     }
 
     @Transactional
@@ -168,18 +190,13 @@ public class AuthService {
             }
         }
 
-        String inviteToken = UUID.randomUUID().toString();
-        LocalDateTime expiry = LocalDateTime.now()
-                .plusHours(appProperties.getInvite().getTokenExpirationHours());
-
         User user = User.builder()
                 .fullNames(request.getFullNames())
                 .email(request.getEmail())
                 .phoneNumber(PhoneUtils.normalizeRwandaPhone(request.getPhoneNumber()))
                 .status(UserStatus.INVITED)
                 .role(request.getRole())
-                .inviteToken(inviteToken)
-                .inviteTokenExpiry(expiry)
+                .otpVerified(false)
                 .build();
 
         user = userRepository.save(user);
@@ -197,20 +214,68 @@ public class AuthService {
             customerRepository.save(customer);
         }
 
-        emailService.sendInvitationEmail(
-                user.getEmail(),
-                user.getFullNames(),
-                inviteToken,
-                appProperties.getInvite().getTokenExpirationHours());
+        issueInviteOtp(user);
 
         return EntityMapper.toUserResponse(user);
     }
 
-    /**
-     * Generates JWT access token + DB-persisted refresh token pair.
-     *
-     * @param revokeExisting when true, invalidates all prior refresh tokens for this user (login / password change)
-     */
+    private void issueInviteOtp(User user) {
+        String otp = OtpGenerator.generateSixDigitOtp();
+        user.setInviteToken(otp);
+        user.setInviteTokenExpiry(LocalDateTime.now()
+                .plusMinutes(appProperties.getOtp().getExpirationMinutes()));
+        user.setOtpVerified(false);
+        userRepository.save(user);
+
+        emailService.sendVerificationOtpEmail(
+                user.getEmail(),
+                user.getFullNames(),
+                otp,
+                appProperties.getOtp().getExpirationMinutes());
+    }
+
+    private void issueResetOtp(User user) {
+        String otp = OtpGenerator.generateSixDigitOtp();
+        user.setResetToken(otp);
+        user.setResetTokenExpiry(LocalDateTime.now()
+                .plusMinutes(appProperties.getOtp().getExpirationMinutes()));
+        userRepository.save(user);
+
+        emailService.sendPasswordResetOtpEmail(
+                user.getEmail(),
+                user.getFullNames(),
+                otp,
+                appProperties.getOtp().getExpirationMinutes());
+    }
+
+    private User findInvitedUser(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (user.getStatus() != UserStatus.INVITED) {
+            throw new BusinessException("Account is already active or not eligible for verification");
+        }
+        return user;
+    }
+
+    private void validateInviteOtp(User user, String otp) {
+        if (user.getInviteToken() == null || !user.getInviteToken().equals(otp)) {
+            throw new BusinessException("Invalid OTP");
+        }
+        if (user.getInviteTokenExpiry() == null || user.getInviteTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new BusinessException("OTP has expired. Request a new one using your email address.");
+        }
+    }
+
+    private void validateResetOtp(User user, String otp) {
+        if (user.getResetToken() == null || !user.getResetToken().equals(otp)) {
+            throw new BusinessException("Invalid OTP");
+        }
+        if (user.getResetTokenExpiry() == null || user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new BusinessException("OTP has expired. Request a new password reset code.");
+        }
+    }
+
     private AuthResponse buildAuthResponse(User user, boolean revokeExisting) {
         if (revokeExisting) {
             refreshTokenRepository.deleteByUser(user);

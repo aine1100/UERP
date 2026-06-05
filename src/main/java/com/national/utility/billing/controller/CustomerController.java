@@ -21,14 +21,14 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/customers")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Customers", description = "Customer management endpoints")
+@Tag(name = "Customers")
 public class CustomerController {
 
     private final CustomerService customerService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'FINANCE')")
-    @Operation(summary = "List customers", description = "Paginated list of all customers")
+    @Operation(summary = "List customers")
     public ResponseEntity<ApiResponse<Page<CustomerResponse>>> getAllCustomers(
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(ApiResponse.success("Customers retrieved", customerService.getAllCustomers(pageable)));

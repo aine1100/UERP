@@ -13,27 +13,27 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @ValidRwandaAddress
-@Schema(name = "LocationSelection", description = "Select each level from the dropdown lists (loaded from locations.json)")
+@Schema(name = "LocationSelection")
 public class LocationSelectionDto {
 
     @NotBlank(message = "Province is required")
-    @Schema(description = "Select province", example = "KIGALI")
+    @Schema(example = "KIGALI")
     private String province;
 
     @NotBlank(message = "District is required")
-    @Schema(description = "Select district", example = "Nyarugenge")
+    @Schema(example = "Nyarugenge")
     private String district;
 
     @NotBlank(message = "Sector is required")
-    @Schema(description = "Select sector", example = "Gitega")
+    @Schema(example = "Gitega")
     private String sector;
 
     @NotBlank(message = "Cell is required")
-    @Schema(description = "Select cell", example = "Akabahizi")
+    @Schema(example = "Akabahizi")
     private String cell;
 
     @NotBlank(message = "Village is required")
-    @Schema(description = "Select village", example = "Gihanga")
+    @Schema(example = "Gihanga")
     private String village;
 
     public LocationAddressDto toAddressDto() {

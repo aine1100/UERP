@@ -21,14 +21,14 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Payments", description = "Payment processing with PDF receipt generation")
+@Tag(name = "Payments")
 public class PaymentController {
 
     private final PaymentService paymentService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('FINANCE', 'CUSTOMER')")
-    @Operation(summary = "Process payment", description = "Accept partial or full payment; sends PDF receipt via email")
+    @Operation(summary = "Process payment")
     public ResponseEntity<ApiResponse<PaymentResponse>> processPayment(@Valid @RequestBody PaymentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Payment processed", paymentService.processPayment(request)));

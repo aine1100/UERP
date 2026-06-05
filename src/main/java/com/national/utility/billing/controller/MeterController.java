@@ -21,14 +21,14 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/meters")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Meters", description = "Meter management and customer assignment")
+@Tag(name = "Meters")
 public class MeterController {
 
     private final MeterService meterService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'FINANCE')")
-    @Operation(summary = "List all meters", description = "Paginated list of meters")
+    @Operation(summary = "List all meters")
     public ResponseEntity<ApiResponse<Page<MeterResponse>>> getAllMeters(
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(ApiResponse.success("Meters retrieved", meterService.getAllMeters(pageable)));
@@ -53,7 +53,7 @@ public class MeterController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    @Operation(summary = "Create meter", description = "Assign a new meter to a customer")
+    @Operation(summary = "Create meter")
     public ResponseEntity<ApiResponse<MeterResponse>> createMeter(@Valid @RequestBody MeterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Meter created", meterService.createMeter(request)));

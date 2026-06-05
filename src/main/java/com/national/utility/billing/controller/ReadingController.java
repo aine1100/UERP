@@ -21,14 +21,14 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/readings")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Readings", description = "Meter reading capture and billing trigger")
+@Tag(name = "Readings")
 public class ReadingController {
 
     private final ReadingService readingService;
 
     @PostMapping
     @PreAuthorize("hasRole('OPERATOR')")
-    @Operation(summary = "Submit reading", description = "Operator submits reading; bill is auto-generated")
+    @Operation(summary = "Submit reading")
     public ResponseEntity<ApiResponse<ReadingResponse>> submitReading(@Valid @RequestBody ReadingRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Reading submitted and bill generated",

@@ -1,6 +1,7 @@
 package com.national.utility.billing.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -13,12 +14,17 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Setup password using invitation token")
+@Schema(description = "Set password after OTP verification")
 public class SetupPasswordRequest {
 
-    @NotBlank(message = "Invite token is required")
-    @Schema(example = "uuid-invite-token")
-    private String inviteToken;
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email format")
+    @Schema(example = "admin@utility.gov.rw")
+    private String email;
+
+    @Pattern(regexp = "^\\d{6}$", message = "OTP must be 6 digits")
+    @Schema(description = "Required if account not yet verified via /verify-account", example = "482913")
+    private String otp;
 
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 64, message = "Password must be between 8 and 64 characters")

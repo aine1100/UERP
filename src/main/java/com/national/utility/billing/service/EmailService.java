@@ -18,59 +18,43 @@ public class EmailService {
     private final JavaMailSender mailSender;
 
     @Async
-    public void sendInvitationEmail(String to, String fullNames, String inviteToken, int expirationHours) {
-        String subject = "Invitation to National Utility Billing System";
+    public void sendVerificationOtpEmail(String to, String fullNames, String otp, int expirationMinutes) {
+        String subject = "Verify Your Account - Utility Billing";
         String body = """
                 Dear %s,
 
-                You have been invited to join the National Utility Billing System (WASAC & REG).
+                Welcome to the National Utility Billing System.
 
-                Your invitation token:
-                %s
+                Your verification code is: %s
 
-                Activate your account by calling:
-                POST /api/auth/setup-password
+                Please verify your account, set your password, then sign in.
 
-                Request body:
-                {
-                  "inviteToken": "%s",
-                  "password": "YourNewSecurePassword"
-                }
-
-                This token expires in %d hours.
+                This code expires in %d minutes.
+                If you did not receive it, you may request a new code using your email address.
 
                 Regards,
                 Utility Billing Team
-                """.formatted(fullNames, inviteToken, inviteToken, expirationHours);
+                """.formatted(fullNames, otp, expirationMinutes);
 
         sendPlainEmail(to, subject, body);
     }
 
     @Async
-    public void sendPasswordResetEmail(String to, String fullNames, String resetToken, int expirationHours) {
-        String subject = "Password Reset - National Utility Billing System";
+    public void sendPasswordResetOtpEmail(String to, String fullNames, String otp, int expirationMinutes) {
+        String subject = "Password Reset Code - Utility Billing";
         String body = """
                 Dear %s,
 
-                We received a request to reset your password for the National Utility Billing System.
+                Your password reset code is: %s
 
-                Your password reset token:
-                %s
+                Use this code to set a new password, then sign in with your new credentials.
 
-                Reset your password by calling:
-                POST /api/auth/reset-password
-
-                Request body:
-                {
-                  "resetToken": "%s",
-                  "password": "YourNewSecurePassword"
-                }
-
-                This token expires in %d hours. If you did not request this, ignore this email.
+                This code expires in %d minutes.
+                If you did not request this, you may ignore this email.
 
                 Regards,
                 Utility Billing Team
-                """.formatted(fullNames, resetToken, resetToken, expirationHours);
+                """.formatted(fullNames, otp, expirationMinutes);
 
         sendPlainEmail(to, subject, body);
     }
@@ -81,12 +65,12 @@ public class EmailService {
         String body = """
                 Dear %s,
 
-                A new utility bill has been generated for your account.
+                A new bill has been generated for your account.
 
                 Bill Reference: %s
                 Total Amount: RWF %s
 
-                Please log in to view details and make payment.
+                Please sign in to view details and make payment.
 
                 Regards,
                 Utility Billing Team
@@ -102,9 +86,7 @@ public class EmailService {
         String body = """
                 Dear %s,
 
-                Thank you for your payment on bill %s.
-
-                Please find your payment receipt attached.
+                Thank you for your payment on bill %s. Your receipt is attached.
 
                 Regards,
                 Utility Billing Team

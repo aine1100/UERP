@@ -11,7 +11,7 @@ public class AppProperties {
 
     private Jwt jwt = new Jwt();
     private Invite invite = new Invite();
-    private Reset reset = new Reset();
+    private Otp otp = new Otp();
     private Admin admin = new Admin();
 
     @Data
@@ -27,8 +27,8 @@ public class AppProperties {
     }
 
     @Data
-    public static class Reset {
-        private int tokenExpirationHours;
+    public static class Otp {
+        private int expirationMinutes;
     }
 
     @Data

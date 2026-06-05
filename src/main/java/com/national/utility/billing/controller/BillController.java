@@ -18,14 +18,14 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/bills")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Bills", description = "Bill viewing and management")
+@Tag(name = "Bills")
 public class BillController {
 
     private final BillService billService;
 
     @GetMapping
     @PreAuthorize("hasRole('FINANCE')")
-    @Operation(summary = "List all bills", description = "Finance views all bills (paginated)")
+    @Operation(summary = "List all bills")
     public ResponseEntity<ApiResponse<Page<BillResponse>>> getAllBills(
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(ApiResponse.success("Bills retrieved", billService.getAllBills(pageable)));
@@ -33,7 +33,7 @@ public class BillController {
 
     @GetMapping("/my")
     @PreAuthorize("hasRole('CUSTOMER')")
-    @Operation(summary = "List my bills", description = "Customer views own bills")
+    @Operation(summary = "List my bills")
     public ResponseEntity<ApiResponse<Page<BillResponse>>> getMyBills(
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(ApiResponse.success("Bills retrieved",

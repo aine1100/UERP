@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/tariffs")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Tariffs", description = "Utility tariff management (Admin only)")
+@Tag(name = "Tariffs")
 public class TariffController {
 
     private final TariffService tariffService;

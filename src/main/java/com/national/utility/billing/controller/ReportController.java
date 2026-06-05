@@ -22,14 +22,14 @@ import java.io.IOException;
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Reports", description = "Export bills, payments, and customers to CSV/Excel")
+@Tag(name = "Reports")
 public class ReportController {
 
     private final ReportService reportService;
 
     @GetMapping("/bills/download")
     @PreAuthorize("hasRole('FINANCE')")
-    @Operation(summary = "Download bills report", description = "Export paginated bills as CSV or Excel")
+    @Operation(summary = "Download bills report")
     public ResponseEntity<byte[]> downloadBills(
             @RequestParam(defaultValue = "csv") String format,
             @PageableDefault(size = 100) Pageable pageable) throws IOException {

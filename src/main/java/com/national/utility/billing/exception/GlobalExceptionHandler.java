@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleDisabled(DisabledException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error(
-                        "Account is not active. Please complete password setup using your invitation link."));
+                        "Account not activated. Verify OTP, set your password, then sign in."));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
