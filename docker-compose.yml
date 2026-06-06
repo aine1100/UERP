@@ -1,0 +1,69 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: uerp-postgres
+    environment:
+      POSTGRES_DB: utility
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d utility"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: uerp-billing:latest
+    container_name: uerp-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Database — Docker Postgres service (not localhost credentials from application.properties)
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/utility
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+
+      # JPA
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_TIME_ZONE: Africa/Kigali
+
+      # Mail (Google SMTP)
+      SPRING_MAIL_HOST: smtp.gmail.com
+      SPRING_MAIL_PORT: 587
+      SPRING_MAIL_USERNAME: ainedushimire@gmail.com
+      SPRING_MAIL_PASSWORD: "rgwi ubxa iyps cwuw"
+
+      # JWT & App
+      JWT_SECRET: YourSuperSecretKeyForJWTTokenGenerationMustBeAtLeast256BitsLong!!
+      APP_JWT_ACCESS_TOKEN_EXPIRATION_MS: 900000
+      APP_JWT_REFRESH_TOKEN_EXPIRATION_MS: 604800000
+      APP_INVITE_TOKEN_EXPIRATION_HOURS: 48
+      APP_OTP_EXPIRATION_MINUTES: 15
+      ADMIN_EMAIL: ainedushimire@gmail.com
+      ADMIN_FULL_NAMES: System Administrator
+      ADMIN_PHONE: "0780000000"
+      ADMIN_PASSWORD: Admin@12345
+
+      # Overdue bill reminders
+      APP_NOTIFICATIONS_OVERDUE_DAYS: 0
+      APP_NOTIFICATIONS_OVERDUE_SCHEDULE_ENABLED: "true"
+      APP_NOTIFICATIONS_OVERDUE_CHECK_INTERVAL_MS: 300000
+
+      # Rwanda locations
+      LOCATIONS_FILE: classpath:locations.json
+      APP_LOCATIONS_SWAGGER_VILLAGE_ENUM_LIMIT: 8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
